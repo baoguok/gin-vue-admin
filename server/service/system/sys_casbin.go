@@ -2,13 +2,16 @@ package system
 
 import (
 	"errors"
+	"strconv"
 	"sync"
 
 	"github.com/casbin/casbin/v2"
+	"github.com/casbin/casbin/v2/model"
 	gormadapter "github.com/casbin/gorm-adapter/v3"
 	"github.com/flipped-aurora/gin-vue-admin/server/global"
 	"github.com/flipped-aurora/gin-vue-admin/server/model/system/request"
 	_ "github.com/go-sql-driver/mysql"
+	"go.uber.org/zap"
 )
 
 //@author: [piexlmax](https://github.com/piexlmax)
@@ -21,11 +24,18 @@ type CasbinService struct{}
 
 var CasbinServiceApp = new(CasbinService)
 
-func (casbinService *CasbinService) UpdateCasbin(authorityId string, casbinInfos []request.CasbinInfo) error {
+func (casbinService *CasbinService) UpdateCasbin(AuthorityID uint, casbinInfos []request.CasbinInfo) error {
+	authorityId := strconv.Itoa(int(AuthorityID))
 	casbinService.ClearCasbin(0, authorityId)
 	rules := [][]string{}
+	//做权限去重处理
+	deduplicateMap := make(map[string]bool)
 	for _, v := range casbinInfos {
-		rules = append(rules, []string{authorityId, v.Path, v.Method})
+		key := authorityId + v.Path + v.Method
+		if _, ok := deduplicateMap[key]; !ok {
+			deduplicateMap[key] = true
+			rules = append(rules, []string{authorityId, v.Path, v.Method})
+		}
 	}
 	e := casbinService.Casbin()
 	success, _ := e.AddPolicies(rules)
@@ -46,6 +56,11 @@ func (casbinService *CasbinService) UpdateCasbinApi(oldPath string, newPath stri
 		"v1": newPath,
 		"v2": newMethod,
 	}).Error
+	e := casbinService.Casbin()
+	err = e.LoadPolicy()
+	if err != nil {
+		return err
+	}
 	return err
 }
 
@@ -55,8 +70,9 @@ func (casbinService *CasbinService) UpdateCasbinApi(oldPath string, newPath stri
 //@param: authorityId string
 //@return: pathMaps []request.CasbinInfo
 
-func (casbinService *CasbinService) GetPolicyPathByAuthorityId(authorityId string) (pathMaps []request.CasbinInfo) {
+func (casbinService *CasbinService) GetPolicyPathByAuthorityId(AuthorityID uint) (pathMaps []request.CasbinInfo) {
 	e := casbinService.Casbin()
+	authorityId := strconv.Itoa(int(AuthorityID))
 	list := e.GetFilteredPolicy(0, authorityId)
 	for _, v := range list {
 		pathMaps = append(pathMaps, request.CasbinInfo{
@@ -85,15 +101,41 @@ func (casbinService *CasbinService) ClearCasbin(v int, p ...string) bool {
 //@return: *casbin.Enforcer
 
 var (
-	syncedEnforcer *casbin.SyncedEnforcer
-	once           sync.Once
+	syncedCachedEnforcer *casbin.SyncedCachedEnforcer
+	once                 sync.Once
 )
 
-func (casbinService *CasbinService) Casbin() *casbin.SyncedEnforcer {
+func (casbinService *CasbinService) Casbin() *casbin.SyncedCachedEnforcer {
 	once.Do(func() {
-		a, _ := gormadapter.NewAdapterByDB(global.GVA_DB)
-		syncedEnforcer, _ = casbin.NewSyncedEnforcer(global.GVA_CONFIG.Casbin.ModelPath, a)
+		a, err := gormadapter.NewAdapterByDB(global.GVA_DB)
+		if err != nil {
+			zap.L().Error("适配数据库失败请检查casbin表是否为InnoDB引擎!", zap.Error(err))
+			return
+		}
+		text := `
+		[request_definition]
+		r = sub, obj, act
+		
+		[policy_definition]
+		p = sub, obj, act
+		
+		[role_definition]
+		g = _, _
+		
+		[policy_effect]
+		e = some(where (p.eft == allow))
+		
+		[matchers]
+		m = r.sub == p.sub && keyMatch2(r.obj,p.obj) && r.act == p.act
+		`
+		m, err := model.NewModelFromString(text)
+		if err != nil {
+			zap.L().Error("字符串加载模型失败!", zap.Error(err))
+			return
+		}
+		syncedCachedEnforcer, _ = casbin.NewSyncedCachedEnforcer(m, a)
+		syncedCachedEnforcer.SetExpireTime(60 * 60)
+		_ = syncedCachedEnforcer.LoadPolicy()
 	})
-	_ = syncedEnforcer.LoadPolicy()
-	return syncedEnforcer
+	return syncedCachedEnforcer
 }

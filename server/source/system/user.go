@@ -2,12 +2,11 @@ package system
 
 import (
 	"context"
-	"github.com/flipped-aurora/gin-vue-admin/server/global"
 	sysModel "github.com/flipped-aurora/gin-vue-admin/server/model/system"
 	"github.com/flipped-aurora/gin-vue-admin/server/service/system"
 	"github.com/flipped-aurora/gin-vue-admin/server/utils"
+	"github.com/gofrs/uuid/v5"
 	"github.com/pkg/errors"
-	uuid "github.com/satori/go.uuid"
 	"gorm.io/gorm"
 )
 
@@ -25,7 +24,7 @@ func (i *initUser) MigrateTable(ctx context.Context) (context.Context, error) {
 	if !ok {
 		return ctx, system.ErrMissingDBContext
 	}
-	return ctx, db.AutoMigrate(&sysModel.SysUser{})
+	return ctx, db.AutoMigrate(&sysModel.SysUser{}, &sysModel.SysChatGptOption{})
 }
 
 func (i *initUser) TableCreated(ctx context.Context) bool {
@@ -50,26 +49,26 @@ func (i *initUser) InitializeData(ctx context.Context) (next context.Context, er
 
 	entities := []sysModel.SysUser{
 		{
-			UUID:        uuid.NewV4(),
+			UUID:        uuid.Must(uuid.NewV4()),
 			Username:    "admin",
 			Password:    adminPassword,
-			NickName:    "超级管理员",
+			NickName:    "Mr.奇淼",
 			HeaderImg:   "https://qmplusimg.henrongyi.top/gva_header.jpg",
-			AuthorityId: "888",
+			AuthorityId: 888,
 			Phone:       "17611111111",
 			Email:       "333333333@qq.com",
 		},
 		{
-			UUID:        uuid.NewV4(),
+			UUID:        uuid.Must(uuid.NewV4()),
 			Username:    "a303176530",
 			Password:    password,
-			NickName:    "QMPlusUser",
+			NickName:    "用户1",
 			HeaderImg:   "https:///qmplusimg.henrongyi.top/1572075907logo.png",
-			AuthorityId: "9528",
+			AuthorityId: 9528,
 			Phone:       "17611111111",
 			Email:       "333333333@qq.com"},
 	}
-	if err = global.GVA_DB.Create(&entities).Error; err != nil {
+	if err = db.Create(&entities).Error; err != nil {
 		return ctx, errors.Wrap(err, sysModel.SysUser{}.TableName()+"表数据初始化失败!")
 	}
 	next = context.WithValue(ctx, i.InitializerName(), entities)
@@ -96,5 +95,5 @@ func (i *initUser) DataInserted(ctx context.Context) bool {
 		Preload("Authorities").First(&record).Error, gorm.ErrRecordNotFound) { // 判断是否存在数据
 		return false
 	}
-	return len(record.Authorities) > 0 && record.Authorities[0].AuthorityId == "888"
+	return len(record.Authorities) > 0 && record.Authorities[0].AuthorityId == 888
 }

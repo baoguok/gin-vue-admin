@@ -1,21 +1,35 @@
 <template>
   <div>
-    <span class="gva-icon" style="position: absolute; z-index: 9999; padding: 3px 10px 0; ">
+    <span
+      class="gva-icon"
+      style="position: absolute; z-index: 9999; padding: 3px 10px 0; "
+    >
       <el-icon>
-        <component :is="metaData.icon"/>
+        <component :is="metaData.icon" />
       </el-icon>
     </span>
-    <el-select v-model="metaData.icon" style="width:100%" clearable filterable class="gva-select" placeholder="请选择">
+    <el-select
+      v-model="metaData.icon"
+      style="width:100%"
+      clearable
+      filterable
+      class="gva-select"
+      placeholder="请选择"
+    >
       <el-option
-          v-for="item in options"
-          :key="item.key"
-          class="select__option_item"
-          :label="item.key"
-          :value="item.key"
+        v-for="item in options"
+        :key="item.key"
+        class="select__option_item"
+        :label="item.key"
+        :value="item.key"
       >
-        <span class="gva-icon" style=" padding: 3px 0 0; " :class="item.label">
+        <span
+          class="gva-icon"
+          style=" padding: 3px 0 0; "
+          :class="item.label"
+        >
           <el-icon>
-            <component :is="item.label"/>
+            <component :is="item.label" />
           </el-icon>
         </span>
         <span style="text-align: left">{{ item.key }}</span>
@@ -26,6 +40,10 @@
 
 <script setup>
 import { ref, reactive } from 'vue'
+
+defineOptions({
+  name: 'Icon',
+})
 
 const props = defineProps({
   meta: {
@@ -1165,18 +1183,10 @@ if (!metaData.value.icon) {
 }
 </script>
 
-<script>
-export default {
-  name: 'Icon',
-}
-</script>
-
 <style lang="scss">
 .gva-icon {
-  //float: left;
   color: rgb(132, 146, 166);
-  font-size: 13px;
-  //line-height: 32px;
+  font-size: 14px;
   margin-right: 10px;
 }
 

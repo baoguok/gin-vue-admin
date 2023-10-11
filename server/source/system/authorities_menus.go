@@ -2,6 +2,7 @@ package system
 
 import (
 	"context"
+
 	sysModel "github.com/flipped-aurora/gin-vue-admin/server/model/system"
 	"github.com/flipped-aurora/gin-vue-admin/server/service/system"
 	"github.com/pkg/errors"
@@ -44,10 +45,7 @@ func (i *initMenuAuthority) InitializeData(ctx context.Context) (next context.Co
 	}
 	next = ctx
 	// 888
-	if err = db.Model(&authorities[0]).Association("SysBaseMenus").Replace(menus[:20]); err != nil {
-		return next, err
-	}
-	if err = db.Model(&authorities[0]).Association("SysBaseMenus").Append(menus[21:]); err != nil {
+	if err = db.Model(&authorities[0]).Association("SysBaseMenus").Replace(menus); err != nil {
 		return next, err
 	}
 
@@ -59,10 +57,10 @@ func (i *initMenuAuthority) InitializeData(ctx context.Context) (next context.Co
 	}
 
 	// 9528
-	if err = db.Model(&authorities[2]).Association("SysBaseMenus").Replace(menus[:12]); err != nil {
+	if err = db.Model(&authorities[2]).Association("SysBaseMenus").Replace(menus[:11]); err != nil {
 		return next, err
 	}
-	if err = db.Model(&authorities[2]).Association("SysBaseMenus").Append(menus[13:17]); err != nil {
+	if err = db.Model(&authorities[2]).Association("SysBaseMenus").Append(menus[12:17]); err != nil {
 		return next, err
 	}
 	return next, nil
@@ -73,10 +71,13 @@ func (i *initMenuAuthority) DataInserted(ctx context.Context) bool {
 	if !ok {
 		return false
 	}
-	var count int64
-	if err := db.Model(&sysModel.SysAuthority{}).
-		Where("authority_id = ?", "9528").Preload("SysBaseMenus").Count(&count); err != nil {
-		return count == 16
+	auth := &sysModel.SysAuthority{}
+	if ret := db.Model(auth).
+		Where("authority_id = ?", 9528).Preload("SysBaseMenus").Find(auth); ret != nil {
+		if ret.Error != nil {
+			return false
+		}
+		return len(auth.SysBaseMenus) > 0
 	}
 	return false
 }

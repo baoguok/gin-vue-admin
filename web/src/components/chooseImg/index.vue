@@ -1,5 +1,12 @@
 <template>
-  <el-drawer v-model="drawer" title="媒体库" size="650px">
+  <el-drawer
+    v-model="drawer"
+    title="媒体库"
+    size="650px"
+  >
+    <warning-bar
+      title="点击“文件名/备注”可以编辑文件名或者备注内容。"
+    />
     <div class="gva-btn-list">
       <upload-common
         v-model:imageCommon="imageCommon"
@@ -13,22 +20,38 @@
         class="upload-btn-media-library"
         @on-success="open"
       />
-      <el-form ref="searchForm" :inline="true" :model="search">
+      <el-form
+        ref="searchForm"
+        :inline="true"
+        :model="search"
+      >
         <el-form-item label="">
-          <el-input v-model="search.keyword" class="keyword" placeholder="请输入文件名或备注" />
+          <el-input
+            v-model="search.keyword"
+            class="keyword"
+            placeholder="请输入文件名或备注"
+          />
         </el-form-item>
 
         <el-form-item>
-          <el-button size="small" type="primary" icon="search" @click="open">查询</el-button>
+          <el-button
+            type="primary"
+            icon="search"
+            @click="open"
+          >查询</el-button>
         </el-form-item>
       </el-form>
     </div>
     <div class="media">
-      <div v-for="(item,key) in picList" :key="key" class="media-box">
+      <div
+        v-for="(item,key) in picList"
+        :key="key"
+        class="media-box"
+      >
         <div class="header-img-box-list">
           <el-image
             :key="key"
-            :src="(item.url && item.url.slice(0, 4) !== 'http')?path+item.url:item.url"
+            :src="getUrl(item.url)"
             @click="chooseImg(item.url,target,targetKey)"
           >
             <template #error>
@@ -40,7 +63,10 @@
             </template>
           </el-image>
         </div>
-        <div class="img-title" @click="editFileNameFunc(item)">{{ item.name }}</div>
+        <div
+          class="img-title"
+          @click="editFileNameFunc(item)"
+        >{{ item.name }}</div>
       </div>
     </div>
     <el-pagination
@@ -56,11 +82,13 @@
 </template>
 
 <script setup>
+import { getUrl } from '@/utils/image'
 import { ref } from 'vue'
 import { getFileList, editFileName } from '@/api/fileUploadAndDownload'
 import UploadImage from '@/components/upload/image.vue'
 import UploadCommon from '@/components/upload/common.vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import WarningBar from '@/components/warningBar/warningBar.vue'
 
 const imageUrl = ref('')
 const imageCommon = ref('')
@@ -69,7 +97,6 @@ const search = ref({})
 const page = ref(1)
 const total = ref(0)
 const pageSize = ref(20)
-const keyword = ref('')
 
 // 分页
 const handleSizeChange = (val) => {
@@ -96,7 +123,6 @@ defineProps({
 
 const drawer = ref(false)
 const picList = ref([])
-const path = ref(import.meta.env.VITE_BASE_API)
 
 const chooseImg = (url, target, targetKey) => {
   if (target && targetKey) {
@@ -128,7 +154,7 @@ const editFileNameFunc = async(row) => {
     cancelButtonText: '取消',
     inputPattern: /\S/,
     inputErrorMessage: '不能为空',
-	inputValue: row.name
+    inputValue: row.name
   }).then(async({ value }) => {
     row.name = value
     // console.log(row)
